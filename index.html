@@ -308,8 +308,10 @@ function renderStations(lat,lon){
     const other=cs.filter(t=>!myConnFilter.has(t)).map(t=>`<span class="badge">${CN[t]}</span>`).join("");
     const rt=rateMap[st.StationID];
     let rateTxt="";
+    const textRate=(st.ChargingRate||"").replace(/\r?\n/g,"；").trim();
+    const textHasPrice=/\d+(\.\d+)?\s*元/.test(textRate);
     if(rt&&rt.Rates&&rt.Rates.length){
-      rateTxt=rt.Rates.map(r=>{
+      const structured=rt.Rates.map(r=>{
         const day={1:"每日",2:"平日",3:"假日",4:"假日",5:"特殊平日",6:"特殊假日",7:"特殊假日"}[r.DayType]||"";
         const win=(r.StartTime&&r.EndTime)?` ${r.StartTime}–${r.EndTime}`:"";
         const pk={0:"",1:"尖峰",2:"離峰",3:"半尖峰"}[r.Peak]||"";
@@ -317,8 +319,14 @@ function renderStations(lat,lon){
         const price=r.RateType===1?"免費":`${r.RatePrice} 元/${({2:"度",3:"分",4:"時"})[r.RateType]||"?"}`;
         return `${sea}${day}${pk}${win}：${price}`;
       }).filter(x=>!/：undefined/.test(x)).slice(0,8).join("；");
-      if(rt.OvertimeRate) rateTxt+=` ｜佔位費：${rt.OvertimeRate}`;
-    } else if(st.ChargingRate) rateTxt=st.ChargingRate;
+      if(rt.OvertimeRate) structured+=` ｜佔位費：${rt.OvertimeRate}`;
+      const allFree=rt.Rates.every(r=>r.RateType===1);
+      if(allFree&&textHasPrice){
+        rateTxt=`⚠ 資料源矛盾（TDX 兩欄不一致）：結構化費率=免費，但站點文字費率=「${textRate}」。實際價格以現場/App 為準`;
+      } else {
+        rateTxt=structured+(textRate&&!allFree&&textRate!==structured?` ｜站點補充：${textRate}`:"");
+      }
+    } else if(textRate) rateTxt=textRate;
     const lv=lastLive&&lastLive[st.StationID];
     const lvBad=lv?`<span class="badge live-ok">可用 ${lv[1]}</span><span class="badge live-busy">充電中 ${lv[2]}</span>${lv[3]?`<span class="badge live-fault">故障 ${lv[3]}</span>`:""}<span class="badge" style="color:var(--tx2)">更新 ${lv.t}</span>`:"";
     const dist=d!=null?(d<1000?Math.round(d)+" m":(d/1000).toFixed(1)+" km"):"";
