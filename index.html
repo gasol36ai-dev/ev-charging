@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>台灣 EV 充電費率＋附近站點查詢</title>
+<meta name="description" content="台灣電動車充電品牌尖離峰時段費率查詢，與附近充電站定位＋Google Maps 導航。站點資料來源：交通部 TDX 開放資料。">
+<style>
+:root{--bg:#0e1116;--card:#171c24;--card2:#1e2530;--tx:#e8ecf2;--tx2:#9aa7b8;--acc:#34d399;--peak:#f59e0b;--hol:#60a5fa;--line:#2a3240;--bad:#ef4444}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 -apple-system,"PingFang TC","Microsoft YaHei",sans-serif;-webkit-text-size-adjust:100%}
+header{padding:14px 16px 6px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+h1{font-size:19px;margin:0}
+.clock{font-size:12px;color:var(--tx2)}
+nav{display:flex;gap:8px;padding:8px 16px}
+nav button{flex:1;padding:10px;border:0;border-radius:10px;background:var(--card2);color:var(--tx2);font-size:15px;font-weight:600;cursor:pointer}
+nav button.on{background:var(--acc);color:#08210f}
+main{padding:10px 14px 60px;max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand h2{font-size:17px;margin:0}
+.billing{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--card2);color:var(--tx2);white-space:nowrap}
+.nowrow{display:flex;align-items:center;gap:10px;margin:10px 0 4px}
+.nowprice{font-size:30px;font-weight:800;line-height:1}
+.unit{font-size:12px;color:var(--tx2)}
+.tag{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px}
+.tag.peak{background:#3a2b10;color:var(--peak)}
+.tag.offpeak{background:#0f2e21;color:var(--acc)}
+.tag.hol{background:#12233d;color:var(--hol)}
+.tag.season{background:var(--card2);color:var(--tx2)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+.kv{background:var(--card2);border-radius:10px;padding:7px 9px;font-size:13px}
+.kv b{display:block;font-size:16px}
+.kv span{color:var(--tx2);font-size:11px}
+.kv.dim{opacity:.55}
+.notes{font-size:12px;color:var(--tx2);margin:6px 0 0}
+.notes a{color:#7fb4ff;text-decoration:none}
+.src{font-size:11px;color:#5b6675;margin-top:6px}
+.sorting{font-size:12px;color:var(--tx2);padding:2px 16px}
+.subtable{font-size:12px;color:var(--tx2);margin-top:6px;border-top:1px dashed var(--line);padding-top:6px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.bar button{padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--tx);font-size:13px;cursor:pointer}
+.bar button.on{background:var(--acc);color:#08210f;border-color:transparent;font-weight:700}
+.stcard{display:flex;gap:10px;align-items:flex-start}
+.stmain{flex:1;min-width:0}
+.stmain h3{margin:0;font-size:15px}
+.dist{color:var(--acc);font-weight:700;font-size:13px;white-space:nowrap}
+.meta{font-size:12px;color:var(--tx2);margin:3px 0}
+.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;background:var(--card2);color:var(--tx);margin:2px 4px 2px 0}
+.badge.ccs1{background:#0f2e21;color:var(--acc)}
+.badge.live-ok{background:#0f2e21;color:var(--acc)}
+.badge.live-busy{background:#3a2b10;color:var(--peak)}
+.badge.live-fault{background:#331111;color:var(--bad)}
+.gobtn{display:inline-block;background:#1a73e8;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:9px 14px;border-radius:10px;white-space:nowrap;margin-top:6px}
+.ratebox{font-size:12px;color:var(--tx2);margin-top:4px;white-space:pre-wrap}
+.status{padding:30px 10px;text-align:center;color:var(--tx2)}
+.spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:s 1s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes s{to{transform:rotate(360deg)}}
+.select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--tx);font-size:15px}
+footer{max-width:640px;margin:0 auto;padding:8px 16px 40px;font-size:11px;color:#5b6675}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ 台灣 EV 充電費率＋附近站點</h1>
+  <div class="clock" id="clock"></div>
+</header>
+<nav>
+  <button id="tab-rates" class="on" onclick="showTab('rates')">💰 費率查詢</button>
+  <button id="tab-stations" onclick="showTab('stations')">📍 附近站點</button>
+</nav>
+<div class="sorting" id="sorting"></div>
+<main id="main"></main>
+<footer id="foot"></footer>
+
+<script>
+/* ================= 費率資料（2026-11-21 查證） =================
+  來源：electrify.tw 彙整(2026-09-29更新)＋U-POWER 官網收費標準頁交叉印證
+  summer/null = 夏月價格尚未公布，頁面顯示「待公告」
+================================================================ */
+const RATES = [
+ {id:"evostar", name:"星舟快充", billing:"跨時段分段計費",
+  summer:{label:"6/1–9/30", peakw:[16,22], peak:"待公告", off:6.5, hol:8.0, holDay:"週末與國定假日全天", morningOff:false},
+  nonsummer:{label:"10/1–12/31 現行方案", peakw:[15,21], peak:13.5, off:5.8, hol:6.2, holDay:"週末與國定假日全天", morningOff:false},
+  offWin:"平日 00:00–14:59、21:00–23:59", peakWin:"平日 15:00–20:59", holNote:"週末／國定假日全天 6.2 元",
+  notes:["5.8 離峰與 6.2 假日為 2026/10/1–12/31 方案","夏月離峰 6.5、假日 8.0；夏月尖峰依官方公告"],
+  src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+
+ {id:"kuo", name:"全國特急電", billing:"跨時段分段計費",
+  summer:{label:"6/1–9/30", peakw:[16,22], peak:"待公告", off:"待公告", hol:"待公告", holDay:"週末全天", morningOff:false},
+  nonsummer:{label:"10/1–5/31", peakw:[15,21], peak:12.9, off:5.9, hol:5.9, holDay:"週末全天", morningOff:false},
+  offWin:"平日 00:00–15:00、21:00–24:00", peakWin:"平日 15:00–21:00", holNote:"週末全天 5.9 元",
+  notes:["平日尖峰 12.9 為主流品牌最低","夏月價格依官方公告"],
+  src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+
+ {id:"tail", name:"TAIL 特爾電力", billing:"跨時段分段計費",
+  summer:{label:"6/1–9/30", peakw:[16,22], peak:"待公告", off:"待公告", hol:"待公告", holDay:"週末", morningOff:true, morningWin:[0,6]},
+  nonsummer:{label:"10/1 起", peakw:[15,21], peak:13.8, off:6.5, hol:6.8, holDay:"週六 06:00–週日 23:59", morningOff:true, morningWin:[0,6], holUntil:"假日 6.8 優惠至 2026/12/31"},
+  offWin:"平日 21:00–隔日 14:59（週六 00:00–05:59 亦為 6.5 離峰）", peakWin:"平日 15:00–20:59", holNote:"假日 6.8 元（至 2026/12/31）",
+  notes:["假日優惠至 2026/12/31，之後假日價依官方公告","夏月價格依官方公告"],
+  src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+
+ {id:"evo", name:"EVOASIS 星晴", billing:"跨時段分段計費",
+  summer:{label:"6/1–9/30", peakw:[16,22], peak:"待公告", off:"待公告", hol:"待公告", holDay:"週六日與國定假日", morningOff:true, morningWin:[0,7]},
+  nonsummer:{label:"10/16 起全站適用", peakw:[15,21], peak:14.9, off:6.5, hol:8.4, holDay:"週六日與國定假日", morningOff:true, morningWin:[0,7]},
+  offWin:"平日 21:00–隔日 14:59", peakWin:"平日 15:00–20:59", holNote:"假日 8.4 元；週六 00:00–06:59 適用離峰 6.5 元",
+  extra:{title:"國道服務區（另一套費率）", off:10, peak:12.5, hol:10, desc:"平日尖峰 12.5 元，其餘時間與假日 10 元（非夏月尖峰同為 15:00–21:00）"},
+  notes:["訂閱 88/688 元方案享星晴 9 折、國道 75 折（折扣不適用尖峰）","夏月價格依官方公告","10 月曾分兩階段切換，現全站已適用 15:00–21:00 尖峰"],
+  src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+
+ {id:"upower", name:"U-POWER", billing:"起充時間決定整次費率",
+  summer:{label:"5/16–10/15", peakw:[16,22], peak:13.5, off:"待公告", hol:"待公告", holDay:"依假日規則", morningOff:true, morningWin:[0,6]},
+  nonsummer:{label:"10/16–5/15", peakw:[15,21], peak:13.5, off:6.9, hol:8.5, holDay:"依假日規則", morningOff:true, morningWin:[0,6]},
+  offWin:"平日 00:00–15:00、21:00–24:00", peakWin:"平日 15:00–21:00", holNote:"假日 8.5 元；假日與連假首日 00:00–05:59 適用離峰",
+  notes:["⚠ 起充當下時段決定整筆價格：20:57 起充＝整筆尖峰價","⚠ LUXGEN（及 BMW/LEXUS/M-Benz/TOYOTA）車廠 App 用戶：費率依車廠自有方案，非上表時段價","非會員全天 14 元；賓士展間站全天 12 元"],
+  src:["https://www.u-power.com.tw/charge.html","https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+
+ {id:"evalue", name:"EVALUE 華城", billing:"跨時段分段計費（依功率分級）",
+  summer:{label:"6/1–9/30", peakw:[16,22], peak:"待公告", off:"待公告", hol:"待公告", holDay:"假日全天", morningOff:false},
+  nonsummer:{label:"10/1–5/31", peakw:[15,21], peak:13.5, off:6.6, hol:8.3, holDay:"假日全天", morningOff:false,
+    tiers:[{label:"超充 240kW 以上", off:8.0, hol:9.0}]},
+  offWin:"平日 21:00–隔日 15:00", peakWin:"平日 15:00–21:00", holNote:"假日全天 8.3 元（快充 120–180kW）",
+  extra:{title:"超充 240kW 以上", off:8.0, peak:13.5, hol:9.0, desc:"尖峰與快充同價 13.5 元，離峰／假日較貴"},
+  notes:["部分站樁不參與時間電價，以 App 顯示為準","夏月價格依官方公告"],
+  src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+
+ {id:"icharging", name:"iCharging 中興電工", billing:"站點個別定價",
+  summer:{label:"站點個別定價", peakw:[15,21], peak:null, off:null, hol:null, holDay:"依站點", morningOff:false, noTou:true},
+  nonsummer:{label:"站點個別定價", peakw:[15,21], peak:null, off:null, hol:null, holDay:"依站點", morningOff:false, noTou:true},
+  offWin:"", peakWin:"", holNote:"",
+  notes:["官方公告原價 12 元/度","iParking App 會員價：國道服務區約 9.2–10 元、市區站約 8 元","部分市區站以每分鐘計費"],
+  src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+
+ {id:"costco", name:"Costco 好市多（慢充）", billing:"單一費率",
+  summer:{label:"單一費率", peak:null, peak:null, off:5.8, hol:5.8, holDay:"全天單一價", morningOff:false, noTou:true},
+  nonsummer:{label:"單一費率", peak:null, peak:null, off:5.8, hol:5.8, holDay:"全天單一價", morningOff:false, noTou:true},
+  offWin:"", peakWin:"", holNote:"2026/11/9 起降為 5.8 元",
+  notes:["J1772／Type 2 慢充，購物時搭配補電","11/23–12/6 黑五期間 4.9 元/度"],
+  src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+];
+
+const RATE_DATE = "2026-11-21";
+const fmt = n => (typeof n === "number" ? n.toFixed(n % 1 ? 1 : 0) : null);
+function seasonOf(b, d){
+  const m = d.getMonth()+1, day = d.getDate();
+  const md = m*100+day;
+  const s = b.summer.label;
+  let inSummer = false;
+  if(s.startsWith("6/1")) inSummer = (md>=601 && md<=930);
+  else if(s.startsWith("5/16")) inSummer = (md>=516 && md<=1015);
+  if(b.id==="icharging"||b.id==="costco") inSummer=false;
+  return inSummer ? b.summer : b.nonsummer;
+}
+function nowState(b, d){
+  if(b.id==="costco") return {price:b.nonsummer.off, period:"單一費率", season:b.nonsummer};
+  if(b.id==="icharging") return {price:null, period:"依站點", season:b.nonsummer};
+  const se = seasonOf(b,d);
+  const wd = d.getDay(), h = d.getHours();
+  const isHol = (wd===0||wd===6);
+  if(isHol){
+    if(se.morningOff && h>=se.morningWin[0] && h<se.morningWin[1]) return {price:se.off, period:"假日離峰", season:se};
+    if(typeof se.peak==="number" && !se.noTou && se.peak!==se.hol) return {price:se.hol, period:"假日", season:se};
+    return {price:se.hol, period:"假日", season:se};
+  }
+  const [ps,pe] = se.peakw;
+  if(h>=ps && h<pe) return {price:se.peak, period:"尖峰", season:se};
+  return {price:se.off, period:"離峰", season:se};
+}
+function cls(p){ return p==="尖峰"?"peak":(p.startsWith("假日")?"hol":"offpeak"); }
+
+/* ================= 費率頁 ================= */
+function renderRates(){
+  const now = new Date();
+  const rows = RATES.map(b=>({b, st:nowState(b, now)}));
+  rows.sort((a,z)=>{
+    const pa = typeof a.st.price==="number"?a.st.price:999, pz = typeof z.st.price==="number"?z.st.price:999;
+    return pa-pz;
+  });
+  document.getElementById("sorting").textContent =
+    `💰 依「此刻價格」由低至高排序（${now.toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})} 更新）`;
+  const main = document.getElementById("main");
+  main.innerHTML = rows.map(({b,st})=>{
+    const se = st.season;
+    const priceTxt = typeof st.price==="number" ? fmt(st.price) : "—";
+    const isCurSeason = se===b.nonsummer;
+    const grid = `
+      <div class="grid">
+        <div class="kv${typeof se.off!=="number"?" dim":""}"><span>平日離峰</span><b>${fmt(se.off)??"待公告"}</b></div>
+        <div class="kv${typeof se.peak!=="number"?" dim":""}"><span>平日尖峰</span><b>${fmt(se.peak)??"待公告"}</b></div>
+        <div class="kv${typeof se.hol!=="number"?" dim":""}"><span>假日</span><b>${fmt(se.hol)??"待公告"}</b></div>
+      </div>`;
+    const extra = b.extra ? `
+      <div class="subtable"><b style="color:var(--tx)">${b.extra.title}</b>：離峰 ${fmt(b.extra.off)}／尖峰 ${fmt(b.extra.peak)}／假日 ${fmt(b.extra.hol)} 元。${b.extra.desc||""}</div>`:"";
+    return `<div class="card">
+      <div class="brand"><h2>${b.name}</h2><span class="billing">${b.billing}</span></div>
+      <div class="nowrow">
+        <span class="nowprice">${priceTxt}</span><span class="unit">元/度</span>
+        <span class="tag ${cls(st.period)}">${st.period}</span>
+        <span class="tag season">${isCurSeason?"非夏月":"夏月"}（${se.label}）</span>
+      </div>
+      ${grid}${extra}
+      <p class="notes">${b.notes.map(n=>"• "+n).join("<br>")}</p>
+      ${b.offWin?`<p class="notes">時段：離峰 ${b.offWin}｜尖峰 ${b.peakWin}｜${b.holNote}</p>`:""}
+      <div class="src">費率查證日 ${RATE_DATE}｜來源：${b.src.map(u=>`<a href="${u}" target="_blank" rel="noopener">${u.includes("u-power")?"U-POWER 官網":"electrify.tw"}</a>`).join("、")}｜實際價格以各品牌 App 顯示為準</div>
+    </div>`;
+  }).join("");
+  document.getElementById("foot").innerHTML =
+    "資料為公告費率彙整（非即時 API）｜站點資料：交通部 TDX 開放資料｜假日＝週六日；國定假日與連假規則以各品牌 App 為準";
+}
+
+/* ================= 站點頁（TDX） ================= */
+const API = "https://tdx.transportdata.tw/api/basic";
+const q = o => Object.entries(o).map(([k,v])=>encodeURIComponent(k)+"="+encodeURIComponent(v)).join("&");
+const CITY = [
+ ["Taipei","台北市",[25.00,121.45,25.20,121.63]],["Keelung","基隆市",[25.10,121.68,25.32,121.88]],
+ ["Hsinchu","新竹市",[24.72,120.90,24.85,121.12]],["NewTaipei","新北市",[24.88,121.33,25.30,122.01]],
+ ["Taoyuan","桃園市",[24.60,120.95,25.20,121.42]],["HsinchuCounty","新竹縣",[24.40,120.95,24.85,121.46]],
+ ["MiaoliCounty","苗栗縣",[24.25,120.62,24.76,121.32]],["Taichung","台中市",[23.95,120.50,24.45,121.31]],
+ ["ChanghuaCounty","彰化縣",[23.70,120.25,24.16,120.71]],["NantouCounty","南投縣",[23.40,120.60,24.26,121.36]],
+ ["YunlinCounty","雲林縣",[23.45,120.05,23.91,120.66]],["Chiayi","嘉義市",[23.42,120.15,23.71,120.61]],
+ ["ChiayiCounty","嘉義縣",[23.20,120.10,23.61,120.96]],["Tainan","台南市",[22.90,120.00,23.46,120.71]],
+ ["Kaohsiung","高雄市",[22.35,120.10,23.01,120.76]],["PingtungCounty","屏東縣",[21.90,120.20,22.91,121.01]],
+ ["YilanCounty","宜蘭縣",[24.30,121.50,25.00,122.01]],["HualienCounty","花蓮縣",[23.40,121.15,24.41,121.91]],
+ ["TaitungCounty","台東縣",[22.00,120.50,23.41,121.36]],["KinmenCounty","金門縣",[24.30,118.10,24.62,118.51]],
+ ["PenghuCounty","澎湖縣",[23.10,119.30,23.86,119.76]],
+];
+function pickCity(lat,lon){
+  for(const [c,n,bb] of CITY) if(lat>=bb[0]&&lat<=bb[2]&&lon>=bb[1]&&lon<=bb[3]) return c;
+  let best=null,bd=1e9;
+  for(const [c,n,bb] of CITY){const cy=(bb[0]+bb[2])/2,cx=(bb[1]+bb[3])/2,d=(lat-cy)**2+(lon-cx)**2;if(d<bd){bd=d;best=c}}
+  return best;
+}
+const hav = (a,b,c,d)=>{const R=6371e3,p=Math.PI/180,dl=(c-a)*p,dk=(d-b)*p,x=Math.sin(dl/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(dk/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
+const CN = {1:"CCS1",2:"CCS2",3:"CHAdeMO",4:"Tesla_TPC",5:"J1772",6:"Type2",254:"其他",255:"未知"};
+let myConnFilter = new Set([1,5]); // 預設：CCS1 快充 + J1772 慢充（納智捷）
+let lastCity=null, lastSt=null, lastRate=null, lastLive=null, myLoc=null;
+
+function showTab(t){
+  document.getElementById("tab-rates").classList.toggle("on",t==="rates");
+  document.getElementById("tab-stations").classList.toggle("on",t==="stations");
+  if(t==="rates"){renderRates();document.getElementById("sorting").textContent="";}
+  else stationsEntry();
+}
+function stationsEntry(){
+  const main=document.getElementById("main");
+  document.getElementById("sorting").textContent="";
+  main.innerHTML=`<div class="card"><div class="bar"><button id="gps">📍 用我的位置找附近站點</button>
+    <span style="font-size:12px;color:var(--tx2)">或</span>
+    <select class="select" id="citySel" style="flex:1"><option value="">選擇縣市…</option>${CITY.map(c=>`<option value="${c[0]}">${c[1]}</option>`).join("")}</select></div>
+    <p class="notes" id="gpsmsg">定位只在本機處理；站點資料由交通部 TDX 開放資料即時取得。導航按鈕會開啟 Google Maps。</p></div>
+    <div id="stlist"></div>`;
+  document.getElementById("gps").onclick=startGeo;
+  document.getElementById("citySel").onchange=e=>{if(e.target.value)loadCity(e.target.value,null,null)};
+  if(lastCity) loadCity(lastCity, myLoc?myLoc[0]:null, myLoc?myLoc[1]:null, true);
+  else if(myLoc) loadCity(pickCity(...myLoc), myLoc[0], myLoc[1], true);
+}
+function startGeo(){
+  const msg=document.getElementById("gpsmsg");
+  if(!navigator.geolocation){msg.textContent="此瀏覽器不支援定位，請改用縣市選單。";return}
+  msg.textContent="定位中…（請允許瀏覽器位置權限）";
+  navigator.geolocation.getCurrentPosition(
+    p=>{myLoc=[p.coords.latitude,p.coords.longitude];msg.textContent=`✅ 定位成功（誤差約 ${Math.round(p.coords.accuracy)} 公尺）`;loadCity(pickCity(...myLoc),myLoc[0],myLoc[1])},
+    e=>{msg.textContent="定位被拒或失敗（"+e.code+"）。可改用上方縣市選單；iOS 需允許網站使用位置。"},
+    {timeout:12000,maximumAge:60000});
+}
+async function loadCity(city,lat,lon,keep){
+  lastCity=city;
+  const list=document.getElementById("stlist");
+  if(!keep){list.innerHTML=`<div class="status"><span class="spin"></span>向 TDX 載入${CITY.find(c=>c[0]===city)[1]}充電站…</div>`}
+  try{
+    const [s,r] = await Promise.all([
+      fetch(`${API}/v1/EV/Station/City/${city}?${q({$format:"JSON",$top:999})}`).then(x=>x.json()),
+      fetch(`${API}/v1/EV/ChargingRate/City/${city}?${q({$format:"JSON",$top:999})}`).then(x=>x.json()),
+    ]);
+    if(!s.Stations) throw new Error(JSON.stringify(s).slice(0,120));
+    lastSt=s.Stations; lastRate=r.ChargingRates||[];
+    renderStations(lat,lon);
+  }catch(ex){
+    list.innerHTML=`<div class="status">載入失敗：${ex.message}<br>可能是 TDX 訪客額度用完（每 IP 每日 20 次）或網路異常，稍後再試。</div>`;
+  }
+}
+function renderStations(lat,lon){
+  const list=document.getElementById("stlist");
+  const cname=CITY.find(c=>c[0]===lastCity)[1];
+  let rows=lastSt.map(st=>{
+    let d=lat!=null?hav(lat,lon,st.PositionLat,st.PositionLon):null;
+    const cs=(st.Connectors||[]).map(c=>c.Type);
+    const match=[...myConnFilter].some(t=>cs.includes(t));
+    return {st,d,cs,match};
+  }).filter(r=>r.match);
+  rows.sort((a,b)=>(a.d??1e12)-(b.d??1e12));
+  const rateMap={}; (lastRate||[]).forEach(r=>{if(!rateMap[r.StationID])rateMap[r.StationID]=r});
+  const upd=lastSt.length?`（TDX 資料更新：${lastSt[0].SrcUpdateTime||"—"}）`:"";
+  const head=`
+    <div class="card">
+      <div class="bar">
+        <span style="font-size:13px;font-weight:700">${cname}｜符合接頭：${rows.length} 站</span>
+        <button class="${myConnFilter.has(1)?"on":""}" onclick="tg(1)">CCS1</button>
+        <button class="${myConnFilter.has(5)?"on":""}" onclick="tg(5)">J1772</button>
+        <button onclick="toggleAll()">全部接頭</button>
+        <button onclick="loadLive()" id="livebtn">🔋 即時槍況</button>
+      </div>
+      <p class="notes">站點清單 ${upd}｜費率卡請切「費率查詢」分頁</p>
+    </div>`;
+  if(!rows.length){list.innerHTML=head+`<div class="status">此縣市沒有符合所選接頭的站點，試試「全部接頭」。</div>`;return}
+  list.innerHTML=head+rows.slice(0,50).map(({st,d,cs})=>{
+    const my=cs.filter(t=>myConnFilter.has(t)).map(t=>`<span class="badge ccs1">${CN[t]}</span>`).join("");
+    const other=cs.filter(t=>!myConnFilter.has(t)).map(t=>`<span class="badge">${CN[t]}</span>`).join("");
+    const rt=rateMap[st.StationID];
+    let rateTxt="";
+    if(rt&&rt.Rates&&rt.Rates.length){
+      rateTxt=rt.Rates.map(r=>{
+        const day={1:"每日",2:"平日",3:"假日",4:"假日",5:"特殊平日",6:"特殊假日",7:"特殊假日"}[r.DayType]||"";
+        const win=(r.StartTime&&r.EndTime)?` ${r.StartTime}–${r.EndTime}`:"";
+        const pk={0:"",1:"尖峰",2:"離峰",3:"半尖峰"}[r.Peak]||"";
+        const sea=(r.Summer===true)?"夏月":(r.Summer===false?"非夏月":"");
+        const price=r.RateType===1?"免費":`${r.RatePrice} 元/${({2:"度",3:"分",4:"時"})[r.RateType]||"?"}`;
+        return `${sea}${day}${pk}${win}：${price}`;
+      }).filter(x=>!/：undefined/.test(x)).slice(0,8).join("；");
+      if(rt.OvertimeRate) rateTxt+=` ｜佔位費：${rt.OvertimeRate}`;
+    } else if(st.ChargingRate) rateTxt=st.ChargingRate;
+    const lv=lastLive&&lastLive[st.StationID];
+    const lvBad=lv?`<span class="badge live-ok">可用 ${lv[1]}</span><span class="badge live-busy">充電中 ${lv[2]}</span>${lv[3]?`<span class="badge live-fault">故障 ${lv[3]}</span>`:""}<span class="badge" style="color:var(--tx2)">更新 ${lv.t}</span>`:"";
+    const dist=d!=null?(d<1000?Math.round(d)+" m":(d/1000).toFixed(1)+" km"):"";
+    return `<div class="card stcard">
+      <div class="stmain">
+        <h3>${st.StationName.Zh_tw||st.StationName.En||"充電站"} <span class="dist">${dist}</span></h3>
+        <div class="meta">🅿️ ${st.Spaces??"?"} 車位｜⚡ ${st.ChargingPoints??"?"} 樁｜🕒 ${st.ServiceTime||"—"}</div>
+        <div>${my}${other}${lvBad}</div>
+        ${rateTxt?`<div class="ratebox">💰 ${rateTxt}</div>`:""}
+        <a class="gobtn" href="https://www.google.com/maps/dir/?api=1&destination=${st.PositionLat},${st.PositionLon}&travelmode=driving" target="_blank" rel="noopener">🧭 Google Maps 導航</a>
+      </div>
+    </div>`;
+  }).join("");
+}
+function tg(t){myConnFilter.has(t)?myConnFilter.delete(t):myConnFilter.add(t);renderStations(myLoc?myLoc[0]:null,myLoc?myLoc[1]:null)}
+function toggleAll(){myConnFilter=new Set(Object.keys(CN).map(Number).filter(x=>x<254));renderStations(myLoc?myLoc[0]:null,myLoc?myLoc[1]:null)}
+async function loadLive(){
+  document.getElementById("livebtn").textContent="載入中…";
+  try{
+    const r=await fetch(`${API}/v1/EV/ConnectorLiveStatus/City/${lastCity}?${q({$format:"JSON",$top:999})}`).then(x=>x.json());
+    const m={};
+    (r.LiveStatuses||r.ConnectorLiveStatuses||[]).forEach(l=>{
+      const k=m[l.StationID]||(m[l.StationID]=[0,0,0,0]);
+      k[l.ConnectorStatus]=(k[l.ConnectorStatus]||0)+1;
+      if(l.LastUpdateTime&&(!k.t||l.LastUpdateTime>k.t))k.t=l.LastUpdateTime;
+    });
+    lastLive=m;renderStations(myLoc?myLoc[0]:null,myLoc?myLoc[1]:null);
+  }catch(e){document.getElementById("livebtn").textContent="🔋 即時槍況（失敗，再試）"}
+}
+
+/* ================= 啟動 ================= */
+function tick(){document.getElementById("clock").textContent=new Date().toLocaleString("zh-TW",{weekday:"short",hour:"2-digit",minute:"2-digit",month:"numeric",day:"numeric"})}
+tick();setInterval(tick,30000);
+renderRates();
+setInterval(()=>{if(document.getElementById("tab-rates").classList.contains("on"))renderRates()},60000);
+</script>
+</body>
+</html>
