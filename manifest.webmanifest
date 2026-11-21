@@ -1,0 +1,9 @@
+{
+  "name": "台灣 EV 充電費率＋附近站點",
+  "short_name": "EV 充電費率",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0e1116",
+  "theme_color": "#0e1116",
+  "icons": [{ "src": "icon.png", "sizes": "180x180", "type": "image/png" }]
+}
