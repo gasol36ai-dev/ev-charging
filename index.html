@@ -311,7 +311,7 @@ function renderStations(lat,lon){
     const textRate=(st.ChargingRate||"").replace(/\r?\n/g,"；").trim();
     const textHasPrice=/\d+(\.\d+)?\s*元/.test(textRate);
     if(rt&&rt.Rates&&rt.Rates.length){
-      const structured=rt.Rates.map(r=>{
+      let structured=rt.Rates.map(r=>{
         const day={1:"每日",2:"平日",3:"假日",4:"假日",5:"特殊平日",6:"特殊假日",7:"特殊假日"}[r.DayType]||"";
         const win=(r.StartTime&&r.EndTime)?` ${r.StartTime}–${r.EndTime}`:"";
         const pk={0:"",1:"尖峰",2:"離峰",3:"半尖峰"}[r.Peak]||"";
