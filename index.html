@@ -90,8 +90,8 @@ const RATES = [
   summer:{label:"6/1–9/30", peakw:[16,22], peak:"待公告", off:"待公告", hol:"待公告", holDay:"週末全天", morningOff:false},
   nonsummer:{label:"10/1–5/31", peakw:[15,21], peak:12.9, off:5.9, hol:5.9, holDay:"週末全天", morningOff:false},
   offWin:"平日 00:00–15:00、21:00–24:00", peakWin:"平日 15:00–21:00", holNote:"週末全天 5.9 元",
-  notes:["平日尖峰 12.9 為主流品牌最低","夏月價格依官方公告"],
-  src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+  notes:["平日尖峰 12.9 為主流品牌最低（來源：electrify.tw，官網僅公告離峰/週末 5.9）","夏月官方公告：離峰 5.9（平日 00:00–16:00、22:00–24:00 及週末全天）","假日＝週六日；國定假日依 App"],
+  src:["https://www.npcgas.com.tw/","https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
 
  {id:"tail", name:"TAIL 特爾電力", billing:"跨時段分段計費",
   summer:{label:"6/1–9/30", peakw:[16,22], peak:"待公告", off:"待公告", hol:"待公告", holDay:"週末", morningOff:true, morningWin:[0,6]},
@@ -100,13 +100,13 @@ const RATES = [
   notes:["假日優惠至 2026/12/31，之後假日價依官方公告","夏月價格依官方公告"],
   src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
 
- {id:"evo", name:"EVOASIS 星晴", billing:"跨時段分段計費",
-  summer:{label:"6/1–9/30", peakw:[16,22], peak:"待公告", off:"待公告", hol:"待公告", holDay:"週六日與國定假日", morningOff:true, morningWin:[0,7]},
-  nonsummer:{label:"10/16 起全站適用", peakw:[15,21], peak:14.9, off:6.5, hol:8.4, holDay:"週六日與國定假日", morningOff:true, morningWin:[0,7]},
-  offWin:"平日 21:00–隔日 14:59", peakWin:"平日 15:00–20:59", holNote:"假日 8.4 元；週六 00:00–06:59 適用離峰 6.5 元",
+ {id:"evo", name:"EVOASIS 星晴", billing:"跨時段分段計費（僅適用星晴指定站點）",
+  summer:{label:"6/1–9/30", peakw:[16,22], peak:14.9, off:6.5, hol:8.4, holDay:"週六日與國定假日", morningOff:true, morningWin:[0,7]},
+  nonsummer:{label:"10/1–5/31", peakw:[15,21], peak:14.9, off:6.5, hol:8.4, holDay:"週六日與國定假日", morningOff:true, morningWin:[0,7]},
+  offWin:"平日 21:00–隔日 14:59（夏月 22:00–隔日 15:59）", peakWin:"平日 15:00–20:59（夏月 16:00–21:59）", holNote:"假日 8.4 元；週六 00:00–06:59 適用離峰 6.5 元；平日遇國定假日以 8.4 計",
   extra:{title:"國道服務區（另一套費率）", off:10, peak:12.5, hol:10, desc:"平日尖峰 12.5 元，其餘時間與假日 10 元（非夏月尖峰同為 15:00–21:00）"},
-  notes:["訂閱 88/688 元方案享星晴 9 折、國道 75 折（折扣不適用尖峰）","夏月價格依官方公告","10 月曾分兩階段切換，現全站已適用 15:00–21:00 尖峰"],
-  src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+  notes:["夏月/非夏月同價，僅尖峰時段位移一小時（官方星晴電價頁）","訂閱 88/688 元方案享星晴 9 折、國道 75 折（折扣不適用尖峰）","僅適用指定星晴站點；其餘超充/慢充站不適用","跨時段依時段切換點分段計費"],
+  src:["https://www.evoasis.com.tw/post/activity-day_night","https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
 
  {id:"upower", name:"U-POWER", billing:"起充時間決定整次費率",
   summer:{label:"5/16–10/15", peakw:[16,22], peak:13.5, off:"待公告", hol:"待公告", holDay:"依假日規則", morningOff:true, morningWin:[0,6]},
@@ -129,7 +129,7 @@ const RATES = [
   nonsummer:{label:"站點個別定價", peakw:[15,21], peak:null, off:null, hol:null, holDay:"依站點", morningOff:false, noTou:true},
   offWin:"", peakWin:"", holNote:"",
   notes:["官方公告原價 12 元/度","iParking App 會員價：國道服務區約 9.2–10 元、市區站約 8 元","部分市區站以每分鐘計費"],
-  src:["https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
+  src:["https://www.icharging.com.tw/tw/about/%E8%B2%BB%E7%8E%87%E8%AA%AA%E6%98%8E","https://electrify.tw/taiwan-ev-charging-deals-guide/"]},
 
  {id:"costco", name:"Costco 好市多（慢充）", billing:"單一費率",
   summer:{label:"單一費率", peak:null, peak:null, off:5.8, hol:5.8, holDay:"全天單一價", morningOff:false, noTou:true},
@@ -201,7 +201,7 @@ function renderRates(){
       ${grid}${extra}
       <p class="notes">${b.notes.map(n=>"• "+n).join("<br>")}</p>
       ${b.offWin?`<p class="notes">時段：離峰 ${b.offWin}｜尖峰 ${b.peakWin}｜${b.holNote}</p>`:""}
-      <div class="src">費率查證日 ${RATE_DATE}｜來源：${b.src.map(u=>`<a href="${u}" target="_blank" rel="noopener">${u.includes("u-power")?"U-POWER 官網":"electrify.tw"}</a>`).join("、")}｜實際價格以各品牌 App 顯示為準</div>
+      <div class="src">費率查證日 ${RATE_DATE}｜來源：${b.src.map(u=>{const L={ "u-power":"U-POWER 官網","starcharger":"星舟 官網","evoasis":"EVOASIS 官網","icharging":"iCharging 官網","npcgas":"NPC 全國加油站 官網"};const k=Object.keys(L).find(k=>u.includes(k));return `<a href="${u}" target="_blank" rel="noopener">${k?L[k]:"electrify.tw 彙整"}</a>`;}).join("、")}｜實際價格以各品牌 App 顯示為準</div>
     </div>`;
   }).join("");
   document.getElementById("foot").innerHTML =
