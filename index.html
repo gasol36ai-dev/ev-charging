@@ -293,8 +293,11 @@ function renderStations(lat,lon){
     let d=lat!=null?hav(lat,lon,st.PositionLat,st.PositionLon):null;
     const cs=(st.Connectors||[]).map(c=>c.Type);
     const match=[...myConnFilter].some(t=>cs.includes(t));
-    return {st,d,cs,match};
-  }).filter(r=>r.match);
+    const busOnly=/大客車/.test(st.StationName.Zh_tw||"")||/大客車/.test(st.Description||"");
+    return {st,d,cs,match,busOnly};
+  });
+  const hiddenBus=rows.filter(r=>r.busOnly).length;
+  rows=rows.filter(r=>r.match&&!r.busOnly);
   rows.sort((a,b)=>(a.d??1e12)-(b.d??1e12));
   const rateMap={}; (lastRate||[]).forEach(r=>{if(!rateMap[r.StationID])rateMap[r.StationID]=r});
   const upd=lastSt.length?`（TDX 資料更新：${lastSt[0].SrcUpdateTime||"—"}）`:"";
@@ -307,7 +310,7 @@ function renderStations(lat,lon){
         <button onclick="toggleAll()">全部接頭</button>
         <button onclick="loadLive()" id="livebtn">🔋 即時槍況</button>
       </div>
-      <p class="notes">站點清單 ${upd}｜費率卡請切「費率查詢」分頁</p>
+      <p class="notes">站點清單 ${upd}｜已隱藏「大客車」專用站 ${hiddenBus} 座｜費率卡請切「費率查詢」分頁</p>
     </div>`;
   if(!rows.length){list.innerHTML=head+`<div class="status">此縣市沒有符合所選接頭的站點，試試「全部接頭」。</div>`;return}
   list.innerHTML=head+rows.slice(0,50).map(({st,d,cs})=>{
